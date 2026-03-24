@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Quel profil inclusif pensez-vous être ?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg,#667eea,#764ba2);
+      color:#222;
+      padding:20px;
+      min-height:100vh;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background:#fff;
+      border-radius:24px;
+      box-shadow:0 18px 40px rgba(0,0,0,0.18);
+      overflow:hidden;
+    }
+    header {
+      padding:32px 32px 20px;
+      background:linear-gradient(135deg,#4A90E2,#87CEEB);
+      color:#fff;
+    }
+    header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+    header p { opacity:0.95; font-size:0.95rem; }
+
+    /* ── Intro screen ── */
+    #introScreen { padding: 24px 32px 32px; }
+    .intro-text {
+      font-size:0.95rem;
+      color:#444;
+      line-height:1.65;
+      margin-bottom:18px;
+    }
+    .legend-scale {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:26px;
+    }
+    .legend-scale span {
+      display:inline-block;
+      padding:5px 14px;
+      border-radius:999px;
+      background:#f3f4ff;
+      font-size:0.88rem;
+      color:#555;
+      width:fit-content;
+    }
+    .btn-start {
+      border:none;
+      border-radius:999px;
+      padding:13px 32px;
+      font-size:1rem;
+      cursor:pointer;
+      color:#fff;
+      background:linear-gradient(135deg,#4A90E2,#87CEEB);
+      box-shadow:0 6px 18px rgba(74,144,226,0.35);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .btn-start:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(74,144,226,0.4); }
+
+    /* ── Quiz screen ── */
+    #quizScreen { display:none; }
+
+    .progress-bar-wrap { padding:22px 32px 0; }
+    .progress-info {
+      display:flex;
+      justify-content:space-between;
+      font-size:0.82rem;
+      color:#6b7280;
+      margin-bottom:6px;
+    }
+    .progress-track {
+      height:6px;
+      background:#e5e7eb;
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .progress-fill {
+      height:100%;
+      background:linear-gradient(90deg,#4A90E2,#87CEEB);
+      border-radius:999px;
+      transition:width .4s ease;
+      width:0%;
+    }
+
+    /* ── Question carousel ── */
+    .question-viewport {
+      overflow:hidden;
+      position:relative;
+    }
+    .question-card {
+      padding:28px 32px 28px;
+      display:flex;
+      gap:20px;
+      align-items:flex-start;
+      width:100%;
+      /* Hidden by default – will be shown via JS class */
+      display:none;
+    }
+    .question-card.active {
+      display:flex;
+      animation: slideIn .4s cubic-bezier(.4,0,.2,1) both;
+    }
+    .question-card.exit {
+      display:flex;
+      animation: slideOut .35s cubic-bezier(.4,0,.2,1) both;
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform:translateX(60px); }
+      to   { opacity:1; transform:translateX(0); }
+    }
+    @keyframes slideOut {
+      from { opacity:1; transform:translateX(0); }
+      to   { opacity:0; transform:translateX(-60px); }
+    }
+    .question-card img {
+      width:100px;
+      height:100px;
+      border-radius:16px;
+      object-fit:cover;
+      flex-shrink:0;
+    }
+    .q-content { flex:1; }
+    .q-text {
+      font-size:0.97rem;
+      margin-bottom:14px;
+      color:#374151;
+      line-height:1.55;
+    }
+    .options {
+      display:flex;
+      flex-direction:column;
+      gap:9px;
+    }
+    .option {
+      position:relative;
+      padding:10px 16px 10px 36px;
+      border-radius:999px;
+      border:1.5px solid #e5e7eb;
+      background:#fff;
+      cursor:pointer;
+      font-size:0.88rem;
+      line-height:1.3;
+      transition:all .18s ease;
+    }
+    .option:hover { border-color:#4A90E2; box-shadow:0 2px 8px rgba(74,144,226,0.22); }
+    .option input {
+      position:absolute;
+      left:12px;
+      top:50%;
+      transform:translateY(-50%);
+      accent-color:#4A90E2;
+    }
+    .option.selected {
+      border-color:#4A90E2;
+      background:linear-gradient(135deg,#4A90E2,#87CEEB);
+      color:#fff;
+      box-shadow:0 4px 12px rgba(74,144,226,0.35);
+    }
+    .option.selected input { accent-color:#fff; }
+
+    /* ── Result screen ── */
+    #resultScreen {
+      display:none;
+      padding:32px;
+      animation: fadeUp .55s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .badge {
+      font-size:0.78rem;
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+      padding:4px 10px;
+      border-radius:999px;
+      background:#ecfdf5;
+      color:#047857;
+      display:inline-block;
+      margin-bottom:10px;
+    }
+    .profile-title {
+      font-size:1.35rem;
+      font-weight:700;
+      color:#111827;
+      margin-bottom:4px;
+    }
+    .score-line {
+      font-size:0.9rem;
+      color:#6b7280;
+      margin-bottom:14px;
+    }
+    .profile-text {
+      font-size:0.95rem;
+      color:#374151;
+      line-height:1.65;
+      margin-bottom:24px;
+    }
+    .chart-box {
+      width:100%;
+      max-width:400px;
+      height:300px;
+      margin:0 auto 24px;
+    }
+    #radarChart { width:100%; height:100%; }
+    .btn {
+      border:none;
+      border-radius:999px;
+      padding:12px 28px;
+      font-size:1rem;
+      cursor:pointer;
+      color:#fff;
+      background:linear-gradient(135deg,#10b981,#059669);
+      box-shadow:0 6px 18px rgba(16,185,129,0.35);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(16,185,129,0.4); }
+
+    @media (max-width:600px){
+      header { padding:24px 20px 16px; }
+      header h1 { font-size:1.4rem; }
+      #introScreen, .progress-bar-wrap, #resultScreen { padding-left:20px; padding-right:20px; }
+      .question-card { padding:20px; flex-direction:column; }
+      .question-card img { width:100%; height:160px; border-radius:12px; }
+      .chart-box { height:250px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Quel profil inclusif pensez-vous être&nbsp;?</h1>
+    <p>16 questions · Découvrez votre profil dominant et vos axes de progression.</p>
+  </header>
+
+  <!-- Intro -->
+  <div id="introScreen">
+    <div class="intro-text">
+      <strong>Consigne</strong><br>
+      Vous allez lire une série d'affirmations sur votre façon de travailler avec les autres.<br>
+      Répondez en fonction de ce que vous faites le plus souvent aujourd'hui, pas de ce que vous aimeriez idéalement faire.<br><br>
+      Pour chaque phrase, cochez la réponse qui vous correspond le mieux :
+    </div>
+    <div class="legend-scale">
+      <span>1 = Pas du tout vrai pour moi</span>
+      <span>2 = Plutôt pas vrai pour moi</span>
+      <span>3 = Plutôt vrai pour moi</span>
+      <span>4 = Tout à fait vrai pour moi</span>
+    </div>
+    <button class="btn-start" id="startBtn">Commencer le questionnaire →</button>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quizScreen">
+    <div class="progress-bar-wrap">
+      <div class="progress-info">
+        <span id="progressLabel">Question 1 / 16</span>
+        <span id="progressPct">0 %</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div class="question-viewport" id="questionViewport"></div>
+  </div>
+
+  <!-- Result -->
+  <div id="resultScreen">
+    <div class="badge">Résultat</div>
+    <div class="profile-title" id="profileTitle"></div>
+    <div class="score-line" id="scoreLine"></div>
+    <div class="profile-text" id="profileText"></div>
+    <div class="chart-box"><canvas id="radarChart"></canvas></div>
+    <button class="btn" id="restartBtn">Recommencer le test</button>
+  </div>
+</div>
+
+<script>
+  const questions = [
+    { n:1,  dim:"A", img:"https://images.pexels.com/photos/3184328/pexels-photo-3184328.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je remarque quand une personne semble mise à l\u2019écart ou moins à l\u2019aise dans mon environnement de travail." },
+    { n:2,  dim:"A", img:"https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je m\u2019interroge sur l\u2019impact que mes propos, mes blagues ou mes réactions peuvent avoir sur les autres." },
+    { n:3,  dim:"A", img:"https://images.pexels.com/photos/1181530/pexels-photo-1181530.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Quand un sujet touche au handicap, à la diversité ou à l\u2019égalité, je me demande quelle est ma part de responsabilité dans la façon dont il est traité." },
+    { n:4,  dim:"A", img:"https://images.pexels.com/photos/1181435/pexels-photo-1181435.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je prends au sérieux les signaux faibles (malaise, silence, crispation, arrêts maladie), même si personne ne les formule directement." },
+    { n:5,  dim:"B", img:"https://images.pexels.com/photos/1181555/pexels-photo-1181555.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je contribue à ce que les règles implicites (humour, respect, prise de parole) soient claires pour tout le monde." },
+    { n:6,  dim:"B", img:"https://images.pexels.com/photos/1181573/pexels-photo-1181573.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Lorsque des aménagements sont nécessaires pour une personne (horaires, outils, organisation), je considère que cela fait partie du fonctionnement normal d\u2019une équipe." },
+    { n:7,  dim:"B", img:"https://images.pexels.com/photos/1181605/pexels-photo-1181605.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je soutiens l\u2019idée que chacun puisse demander des aménagements sans être considéré comme \u201cun cas à part\u201d et que cela fasse partie intégrante de notre façon de travailler." },
+    { n:8,  dim:"B", img:"https://images.pexels.com/photos/1181558/pexels-photo-1181558.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Dans mon travail, je veille à ce que l\u2019information importante soit accessible à toutes les personnes concernées." },
+    { n:9,  dim:"C", img:"https://images.pexels.com/photos/1181355/pexels-photo-1181355.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"En réunion ou en échange collectif, je fais attention à laisser de l\u2019espace aux personnes qui s\u2019expriment moins spontanément." },
+    { n:10, dim:"C", img:"https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Quand une erreur ou une tension apparaît, je privilégie la recherche de compréhension et d\u2019apprentissage plutôt que la désignation d\u2019un \u201ccoupable\u201d." },
+    { n:11, dim:"C", img:"https://images.pexels.com/photos/1181395/pexels-photo-1181395.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je considère que la diversité des profils (parcours, âges, origines, façons de penser) est une ressource pour le travail, pas seulement une contrainte à gérer." },
+    { n:12, dim:"C", img:"https://images.pexels.com/photos/1181376/pexels-photo-1181376.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je suis prêt·e à adapter ma façon de collaborer (rythme, canal, posture) pour que les échanges soient plus confortables et efficaces pour les autres." },
+    { n:13, dim:"D", img:"https://images.pexels.com/photos/3861831/pexels-photo-3861831.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je n\u2019hésite pas à intervenir quand une blague, un propos ou une attitude me semble excluante ou dévalorisante pour quelqu\u2019un." },
+    { n:14, dim:"D", img:"https://images.pexels.com/photos/1181467/pexels-photo-1181467.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je propose régulièrement des idées ou des ajustements pour que notre façon de travailler soit plus accessible et inclusive." },
+    { n:15, dim:"D", img:"https://images.pexels.com/photos/1181562/pexels-photo-1181562.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je partage, quand c\u2019est pertinent, des ressources ou des informations (articles, formations, initiatives) liées au handicap, à la diversité ou à l\u2019inclusion." },
+    { n:16, dim:"D", img:"https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=800",  text:"Je témoigne de l\u2019impact positif de l\u2019inclusion et de la diversité sur la performance individuelle et collective." }
+  ];
+
+  const modalites = [
+    { value:1, label:"Pas du tout vrai pour moi" },
+    { value:2, label:"Plutôt pas vrai pour moi" },
+    { value:3, label:"Plutôt vrai pour moi" },
+    { value:4, label:"Tout à fait vrai pour moi" }
+  ];
+
+  const profiles = {
+    explorateur: {
+      title:"🌱 Explorateur·rice en devenir",
+      text:"Vous avez déjà une vraie sensibilité aux autres, même si vous n\u2019appelez pas encore toujours cela \u201cinclusion\u201d. Vous observez, vous vous posez des questions, parfois vous hésitez à intervenir ou à proposer autre chose. Vous n\u2019êtes pas en retard\u00a0: vous êtes au début d\u2019un chemin, et chaque prise de conscience compte."
+    },
+    batisseur: {
+      title:"🏗️ Bâtisseur·se de bases solides",
+      text:"Vous avez posé des fondations inclusives\u00a0: écoute, respect, attention aux situations particulières. Vous fonctionnez beaucoup au bon sens, ce qui crée déjà un climat plus sécurisant. L\u2019enjeu pour vous\u00a0: rendre ces bons réflexes plus réguliers, visibles et structurés."
+    },
+    facilitateur: {
+      title:"🤝 Facilitateur·rice du collectif",
+      text:"Vous jouez un rôle clé de régulateur·rice dans le collectif. Vous faites attention aux dynamiques de groupe, vous encouragez l\u2019expression de chacun·e et vous cherchez à adapter la coopération. Vous savez que le climat impacte la performance\u00a0: vous contribuez activement à l\u2019améliorer."
+    },
+    ambassadeur: {
+      title:"⭐ Ambassadeur·rice de l\u2019inclusion",
+      text:"L\u2019inclusion est clairement un fil conducteur de votre manière de travailler. Vous vous questionnez, vous agissez, vous ajustez, vous entraînez les autres avec vous. Vous voyez les liens entre inclusion, performance, bien-être et image de l\u2019organisation\u00a0: vous êtes un vrai point d\u2019appui sur ces sujets."
+    }
+  };
+
+  const radarColors = {
+    explorateur:  { bg:"rgba(129,140,248,0.25)", border:"rgba(79,70,229,1)",   point:"rgba(79,70,229,1)"  },
+    batisseur:    { bg:"rgba(52,211,153,0.25)",  border:"rgba(5,150,105,1)",   point:"rgba(5,150,105,1)"  },
+    facilitateur: { bg:"rgba(59,130,246,0.25)",  border:"rgba(37,99,235,1)",   point:"rgba(37,99,235,1)"  },
+    ambassadeur:  { bg:"rgba(245,158,11,0.25)",  border:"rgba(217,119,6,1)",   point:"rgba(217,119,6,1)"  }
+  };
+
+  function getProfileKey(score) {
+    if (score <= 29) return 'explorateur';
+    if (score <= 41) return 'batisseur';
+    if (score <= 51) return 'facilitateur';
+    return 'ambassadeur';
+  }
+
+  /* ── Build cards ── */
+  let currentIdx = 0;
+  let transitioning = false;
+  let radarChart = null;
+  const cards = [];
+
+  const viewport = document.getElementById('questionViewport');
+
+  questions.forEach((q, idx) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = 'card-' + idx;
+    card.setAttribute('data-dim', q.dim);
+
+    const optHtml = modalites.map(m =>
+      `<label class="option"><input type="radio" name="q${q.n}" value="${m.value}">${m.label}</label>`
+    ).join('');
+
+    card.innerHTML = `
+      <img src="${q.img}" alt="">
+      <div class="q-content">
+        <div class="q-text"><strong>${q.n}.</strong> ${q.text}</div>
+        <div class="options">${optHtml}</div>
+      </div>`;
+
+    viewport.appendChild(card);
+    cards.push(card);
+
+    card.querySelectorAll('input[type="radio"]').forEach(input => {
+      input.addEventListener('change', () => {
+        if (transitioning) return;
+        /* Highlight */
+        card.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+        input.closest('.option').classList.add('selected');
+        /* Advance */
+        setTimeout(() => advance(idx), 480);
+      });
+    });
+  });
+
+  /* ── Navigation ── */
+  function showCard(idx, animate) {
+    const card = cards[idx];
+    card.style.display = 'flex';
+    if (animate) {
+      card.classList.add('active');
+      card.addEventListener('animationend', () => {
+        transitioning = false;
+      }, { once: true });
+    } else {
+      card.classList.add('active');
+      transitioning = false;
+    }
+    updateProgress(idx);
+  }
+
+  function advance(fromIdx) {
+    if (transitioning) return;
+    transitioning = true;
+
+    const cur = cards[fromIdx];
+    cur.classList.remove('active');
+    cur.classList.add('exit');
+
+    cur.addEventListener('animationend', () => {
+      cur.classList.remove('exit');
+      cur.style.display = 'none';
+
+      const next = fromIdx + 1;
+      if (next >= questions.length) {
+        showResult();
+        transitioning = false;
+      } else {
+        currentIdx = next;
+        showCard(next, true);
+      }
+    }, { once: true });
+  }
+
+  function updateProgress(idx) {
+    const pct = Math.round((idx / questions.length) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `Question ${idx + 1} / ${questions.length}`;
+    document.getElementById('progressPct').textContent = pct + ' %';
+  }
+
+  /* ── Start ── */
+  document.getElementById('startBtn').addEventListener('click', () => {
+    document.getElementById('introScreen').style.display = 'none';
+    document.getElementById('quizScreen').style.display = 'block';
+    showCard(0, true);
+  });
+
+  /* ── Results ── */
+  function showResult() {
+    document.getElementById('quizScreen').style.display = 'none';
+    document.getElementById('resultScreen').style.display = 'block';
+
+    const dimScores = { A:0, B:0, C:0, D:0 };
+    const dimCounts = { A:0, B:0, C:0, D:0 };
+
+    questions.forEach((q, idx) => {
+      const checked = cards[idx].querySelector('input[type="radio"]:checked');
+      if (checked) {
+        dimScores[q.dim] += parseInt(checked.value, 10);
+        dimCounts[q.dim]++;
+      }
+    });
+
+    const dimA = dimScores.A / dimCounts.A;
+    const dimB = dimScores.B / dimCounts.B;
+    const dimC = dimScores.C / dimCounts.C;
+    const dimD = dimScores.D / dimCounts.D;
+    const total = dimScores.A + dimScores.B + dimScores.C + dimScores.D;
+
+    const key = getProfileKey(total);
+    const p = profiles[key];
+
+    document.getElementById('profileTitle').textContent = p.title;
+    document.getElementById('profileText').textContent  = p.text;
+    document.getElementById('scoreLine').textContent    = 'Score global : ' + total + ' / 64';
+
+    const c = radarColors[key];
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    if (radarChart) radarChart.destroy();
+
+    radarChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ["Sensibilité\n& conscience","Cadre\n& pratiques","Coopération\n& climat","Proactivité\n& influence"],
+        datasets: [{
+          label: "Votre profil",
+          data: [dimA, dimB, dimC, dimD],
+          fill: true,
+          backgroundColor: c.bg,
+          borderColor: c.border,
+          pointBackgroundColor: c.point,
+          pointBorderColor: "#fff",
+          pointHoverBackgroundColor: "#fff",
+          pointHoverBorderColor: c.border
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: 10 },
+        scales: {
+          r: {
+            suggestedMin:1, suggestedMax:4,
+            ticks: { stepSize:1, showLabelBackdrop:false, color:"rgba(55,65,81,0.8)", font:{ size:10 } },
+            pointLabels: { color:"rgba(15,23,42,0.9)", font:{ size:11, weight:"600" } },
+            grid: { color:"rgba(148,163,184,0.35)", lineWidth:1 },
+            angleLines: { color:"rgba(148,163,184,0.3)", lineWidth:1 },
+            backgroundColor: "rgba(248,250,252,0.9)"
+          }
+        },
+        plugins: {
+          legend: { display:false },
+          tooltip: {
+            backgroundColor:"rgba(15,23,42,0.95)", titleColor:"#e5e7eb", bodyColor:"#e5e7eb",
+            padding:10, cornerRadius:8, displayColors:false,
+            callbacks: {
+              label(context) {
+                const labs = ["Sensibilité & conscience","Cadre & pratiques","Coopération & climat","Proactivité & influence"];
+                return labs[context.dataIndex] + " : " + context.formattedValue + " / 4";
+              }
+            }
+          }
+        },
+        elements: { line:{ borderWidth:2 }, point:{ radius:4, hoverRadius:6, hitRadius:8 } }
+      }
+    });
+
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+
+  /* ── Restart ── */
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    currentIdx = 0;
+    transitioning = false;
+
+    cards.forEach(card => {
+      card.classList.remove('active','exit');
+      card.style.display = 'none';
+      card.querySelectorAll('input[type="radio"]').forEach(i => i.checked = false);
+      card.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+    });
+
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressLabel').textContent = 'Question 1 / 16';
+    document.getElementById('progressPct').textContent = '0 %';
+
+    if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+    document.getElementById('resultScreen').style.display = 'none';
+    document.getElementById('introScreen').style.display = 'block';
+    window.scrollTo({ top:0, behavior:'smooth' });
+  });
+</script>
+</body>
+</html>
